@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 import time
-
+import pandas as pd
 
 
 #Define constants for location, radius and date.
@@ -15,7 +15,15 @@ latitude = '54.972109'
 longitude = '-1.611168'
 radius = '10.0km'
 #TODO: Add date/time constraints.
-twitter_link = f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{radius}%20-filter%3Alinks&src=typed_query&f=live'
+
+#No Filter
+# twitter_link = f'https://twitter.com/search?q=geocode%3A{latitude}%2C{longitude}%2C{radius}&src=typed_query&f=live'
+
+#Filters links
+# twitter_link = f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{radius}%20-filter%3Alinks&src=typed_query&f=live'
+
+#Filters links and replies
+twitter_link = f'https://twitter.com/search?q=geocode%3A{latitude}%2C{longitude}%2C{radius}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query&f=live'
 
 #Use ChromeDriverManager().install() to update driver for browser.
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
@@ -38,9 +46,20 @@ except WebDriverException:
 tweets = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
 print('Num tweets: ',len(tweets))
 
-for tweet in tweets:
-  datetime_element = tweet.find_element(By.TAG_NAME, 'time')
-  datetime_value = datetime_element.get_attribute('datetime')
-  print(datetime_value)
 
-input('--pausing browser, press enter to continue.--')
+tweet_df = pd.DataFrame(columns=['tweetText', 'datetime'])
+
+for tweet in tweets:
+  try:
+    datetime_element = tweet.find_element(By.TAG_NAME, 'time')
+    datetime_value = datetime_element.get_attribute('datetime')
+    text_element = tweet.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
+    text_value = text_element.text
+    new_row = {'tweetText': text_value, 'datetime': datetime_value}
+    tweet_df = tweet_df.append(new_row, ignore_index=True)
+  except Exception as err:
+    print(f'Error: {err}')
+    continue
+  
+
+print(tweet_df)

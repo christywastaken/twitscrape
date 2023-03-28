@@ -39,27 +39,43 @@ while state != 'complete':
 #Wait 10s for the DOM element containing data-testid="tweet" to be returned. 
 try:
   WebDriverWait(driver, 10).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-testid="tweet"]')))
+  print('-- tweet DOM returned --')
 except WebDriverException:
   print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
 
-#Get tweets
-tweets = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
-print('Num tweets: ',len(tweets))
+def get_tweets():
+  #Get tweets
+  tweets = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
+  print('Num tweets: ',len(tweets))
 
 
-tweet_df = pd.DataFrame(columns=['tweetText', 'datetime'])
+  tweet_df = pd.DataFrame(columns=['tweetText', 'datetime'])
 
-for tweet in tweets:
-  try:
-    datetime_element = tweet.find_element(By.TAG_NAME, 'time')
-    datetime_value = datetime_element.get_attribute('datetime')
-    text_element = tweet.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
-    text_value = text_element.text
-    new_row = {'tweetText': text_value, 'datetime': datetime_value}
-    tweet_df = tweet_df.append(new_row, ignore_index=True)
-  except Exception as err:
-    print(f'Error: {err}')
-    continue
+  for tweet in tweets:
+    try:
+      datetime_element = tweet.find_element(By.TAG_NAME, 'time')
+      datetime_value = datetime_element.get_attribute('datetime')
+      text_element = tweet.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
+      text_value = text_element.text
+      new_row_df = pd.DataFrame({'tweetText': text_value, 'datetime': datetime_value}, index=[0])
+      tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
+    except Exception as err:
+      print(f'Error: {err}')
+      continue
+    
+
+  print(tweet_df)
+
+
+def scroll_page() -> int:
+  print('-- sleeping 5s --')
+  time.sleep(5)
+  driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+  new_height = driver.execute_script("return document.body.scrollHeight")
+  return new_height
   
-
-print(tweet_df)
+get_tweets()
+scroll_page()
+time.sleep(5)
+get_tweets()
+input('-- Press enter to close browser --')

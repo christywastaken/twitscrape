@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 import time
 
 
+
 #Define constants for location, radius and date.
 geocode = 'geocode:54.972109,-1.611168,10.0km'
 latitude = '54.972109'

@@ -31,11 +31,13 @@ class TwitterScraper():
     self.filter_replies = filter_replies
     self.filter_links = filter_links
 
-     # Use ChromeDriverManager().install() to update driver for browser.
+    # Use ChromeDriverManager().install() to update driver for browser.
     self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
     self.driver.scopes= ['.*adaptive.*']
 
+    # Tweet_df_model
+    self.tweet_df_model = pd.DataFrame(columns=['tweet_text', 'datetime'])
 
   def create_twitter_url(self) -> str:
     # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
@@ -74,7 +76,7 @@ class TwitterScraper():
     Waits for the request containing the tweet data.
     Returns a tuple of (tweet dataframe, remaning rate limit, rate limit reset time)
     """
-    tweet_df = pd.DataFrame(columns=['tweet_text', 'datetime'])
+    tweet_df = self.tweet_df_model
     try:
       # Waits for the response containing 'Adaptive' which contains the tweet data.
       request = self.driver.wait_for_request('adaptive')
@@ -99,18 +101,7 @@ class TwitterScraper():
     return (tweet_df, int(rate_lim_remaining), int(rate_lim_reset_time))
 
 
-  def scroll_page(self) -> int:
-    """
-    Scrolls the page and returns the new scroll-height
-    """
-    time.sleep(1) # I use a 1s wait for safe measure with my old macbook. 
-    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-    new_height = self.driver.execute_script("return document.body.scrollHeight")
-    return new_height
-
-
-
-  def run_scraper(self):
+  def run_scraper(self) -> pd.DataFrame:
     """
     Runs the scraper, returning a dataframe with all of the tweet data.
     """
@@ -125,20 +116,34 @@ class TwitterScraper():
       time.sleep(1)
       state = self.driver.execute_script('return document.readyState')
 
-    #TODO: Loop while heights not equal here.
-    tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
-    
-    print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}')
+    all_tweets_df = self.tweet_df_model #TODO: should this append to the a class property, or just return it from the function as I already am. 
+    last_height = 0
+    # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
+    while True:
+      # Destructure output of get_tweets()
+      tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+      all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
+      print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}')
 
-    if rate_lim_remaining <= 2:
-      # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
-      time_dif = rate_lim_reset_time - time.time()
-      # Add 10s for good measure
-      wait_time = time_dif + 10 
-      print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
-      time.sleep(wait_time)
-    
-    page_height = self.scroll_page()
+      if rate_lim_remaining < 3:
+        # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
+        time_dif = rate_lim_reset_time - time.time()
+        # Add 10s for good measure
+        wait_time = time_dif + 10 
+        print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
+        time.sleep(wait_time)
+      else:
+        time.sleep(1)
+        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+        new_height = self.driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+          print(f'-- new_height: {new_height}, last_height: {last_height} --')
+          print('-- Finished running scraper --')
+          return all_tweets_df
+        else:
+          print(f'-- new_height: {new_height}, last_height: {last_height} --')
+          last_height = new_height
+          
 
 
 

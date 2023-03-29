@@ -28,10 +28,11 @@ twitter_link = f'https://twitter.com/search?q=geocode%3A{latitude}%2C{longitude}
 
 #Use ChromeDriverManager().install() to update driver for browser.
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+#Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
 driver.scopes= ['.*adaptive.*']
 driver.get(twitter_link)
 
-#Wait for the readyState = complete so data has loaded in. 
+#Wait for the readyState = complete so page has loaded in. 
 state = ''
 while state != 'complete':
   print('Page loading not complete')
@@ -39,11 +40,11 @@ while state != 'complete':
   state = driver.execute_script('return document.readyState')
 
 #Wait 10s for the DOM element containing data-testid="tweet" to be returned. 
-try:
-  WebDriverWait(driver, 10).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-testid="tweet"]')))
-  print('-- tweet DOM returned --')
-except WebDriverException:
-  print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
+# try:
+#   WebDriverWait(driver, 10).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-testid="tweet"]')))
+#   print('-- tweet DOM returned --')
+# except WebDriverException:
+#   print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
 
 
 def get_tweets():
@@ -58,13 +59,13 @@ def get_tweets():
     tweets = data['globalObjects']['tweets']
     for tweet_id, tweet_data in tweets.items():
       #Loops through the tweets and stores the tweet text and datetime to DF.
-      print(tweet_data['full_text'])
       tweet_text = tweet_data['full_text']
       created_at = tweet_data['created_at']
       new_row_df = pd.DataFrame({'tweet_text': [tweet_text], 'datetime': [created_at]})
       tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
   except Exception as err:
     print(f'-- Error: {err} --')
+  tweet_df.sort_values(by='datetime', ascending=False, inplace=True)
   print(len(tweet_df))
   print(tweet_df)
   #Deletes driver.requests so the app waits for the new request response

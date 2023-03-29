@@ -10,14 +10,14 @@ from datetime import datetime, timedelta
 
 class TwitterScraper():
 
-  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = None, longitude: float = None, radius: float = None, filter_replies: bool = False, filter_links: bool = False):
+  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = 54.972109, longitude: float = -1.611168, radius: float = 10.0, filter_replies: bool = False, filter_links: bool = False):
     """
     Initialize the TwitterScraper class with optional parameters. The default values are:
-    - start_date: None (today - midnight)
-    - end_date: None (tomorrow - midnight tonight)
-    - latitude: None (default value will be used)
-    - longitude: None (default value will be used)
-    - radius: None (default value will be used)
+    - start_date: None (default set to today - midnight)
+    - end_date: None (default set to tomorrow - midnight tonight)
+    - latitude: 54.972109 (default value will be used - Newcastle-Upon-Tyne)
+    - longitude: -1.611168 (default value will be used - Newcastle-Upon-Tyne)
+    - radius: 10.0 ((km) default value will be used)
     - filter_replies: False
     - filter_links: False
 
@@ -48,20 +48,11 @@ class TwitterScraper():
     else:
       end_date = self.end_date
   
-    if latitude == None:
-      latitude = '54.972109'
-    else:
-      latitude = self.latitude
-
-    if longitude == None:
-      longitude = '-1.611168'
-    else: 
-      longitude = self.longitude
-
-    if radius == None:
-      radius = 10.0
-    else:
-      radius = self.radius
+    latitude = self.latitude
+    longitude = self.longitude
+    radius = self.radius
+    filter_replies = self.filter_replies
+    filter_links = self.filter_links
     
     if filter_replies == False and filter_links == False:
       return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}&src=typed_query'   
@@ -139,9 +130,5 @@ class TwitterScraper():
 
     page_height = scroll_page()
 
-replies_filtered = create_twitter_url(start_date='2023-03-29', end_date='2023-03-30', filter_replies=True)
-print('twitter link for replies filtered: ', replies_filtered)
 
-all_filtered = create_twitter_url(filter_links=True, filter_replies=True)
-print('twitter link for all filtered without adding time cosntraints: ', all_filtered)
 

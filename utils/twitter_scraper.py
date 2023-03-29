@@ -70,6 +70,10 @@ class TwitterScraper():
 
       
   def get_tweets(self) -> Tuple[pd.DataFrame, int, int]:
+    """
+    Waits for the request containing the tweet data.
+    Returns a tuple of (tweet dataframe, remaning rate limit, rate limit reset time)
+    """
     tweet_df = pd.DataFrame(columns=['tweet_text', 'datetime'])
     try:
       # Waits for the response containing 'Adaptive' which contains the tweet data.
@@ -96,6 +100,9 @@ class TwitterScraper():
 
 
   def scroll_page(self) -> int:
+    """
+    Scrolls the page and returns the new scroll-height
+    """
     time.sleep(1) # I use a 1s wait for safe measure with my old macbook. 
     self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
     new_height = self.driver.execute_script("return document.body.scrollHeight")
@@ -103,7 +110,11 @@ class TwitterScraper():
 
 
 
-  def run_scraper(self): #TODO: return dataframe with all the data. 
+  def run_scraper(self):
+    """
+    Runs the scraper, returning a dataframe with all of the tweet data.
+    """
+    #TODO: return dataframe with all the data. 
     #TODO: keep scrolling until new height is the same as current height, i.e. reached the end of the data you require
     self.driver.get(self.create_twitter_url())
 
@@ -127,8 +138,6 @@ class TwitterScraper():
       print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
       time.sleep(wait_time)
     
-
-
     page_height = self.scroll_page()
 
 

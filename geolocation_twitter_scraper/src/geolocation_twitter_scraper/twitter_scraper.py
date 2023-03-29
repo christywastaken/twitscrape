@@ -42,7 +42,7 @@ class TwitterScraper():
   def create_twitter_url(self) -> str:
     # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
     
-    today = datetime.now()
+    today = datetime.utcnow()
     if self.start_date == None:
       #Set the start_date to today
       start_date = today.strftime('%Y-%m-%d')

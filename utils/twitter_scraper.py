@@ -137,11 +137,9 @@ class TwitterScraper():
         self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
         new_height = self.driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
-          print(f'-- new_height: {new_height}, last_height: {last_height} --')
           print('-- Finished running scraper --')
           return all_tweets_df
         else:
-          print(f'-- new_height: {new_height}, last_height: {last_height} --')
           last_height = new_height
           
 

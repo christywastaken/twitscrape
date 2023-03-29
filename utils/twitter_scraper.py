@@ -31,6 +31,11 @@ class TwitterScraper():
     self.filter_replies = filter_replies
     self.filter_links = filter_links
 
+     # Use ChromeDriverManager().install() to update driver for browser.
+    self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
+    self.driver.scopes= ['.*adaptive.*']
+
 
   def create_twitter_url(self) -> str:
     # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
@@ -41,7 +46,7 @@ class TwitterScraper():
       start_date = today.strftime('%Y-%m-%d')
     else: start_date = self.start_date
 
-    if end_date == None:
+    if self.end_date == None:
       #Set the end_date to tomorrow
       tomorrow = today + timedelta(days=1)
       end_date = tomorrow.strftime('%Y-%m-%d')
@@ -64,26 +69,11 @@ class TwitterScraper():
       return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
 
       
-  
-  # Use ChromeDriverManager().install() to update driver for browser.
-  driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-  # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
-  driver.scopes= ['.*adaptive.*']
-  driver.get(twitter_link)
-
-  # Wait for the readyState = complete so page has loaded in. 
-  state = ''
-  while state != 'complete':
-    print('Page loading not complete')
-    time.sleep(1)
-    state = driver.execute_script('return document.readyState')
-
-
-  def get_tweets() -> Tuple[pd.DataFrame, int, int]:
+  def get_tweets(self) -> Tuple[pd.DataFrame, int, int]:
     tweet_df = pd.DataFrame(columns=['tweet_text', 'datetime'])
     try:
       # Waits for the response containing 'Adaptive' which contains the tweet data.
-      request = driver.wait_for_request('adaptive')
+      request = self.driver.wait_for_request('adaptive')
       # Decodes the byte data from the response
       body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')) 
       data = json.loads(body)
@@ -101,23 +91,34 @@ class TwitterScraper():
       print(f'-- Error: {err} --')
     tweet_df.sort_values(by='datetime', ascending=False, inplace=True)
     # Deletes driver.requests so get_tweets() waits for the new request response 
-    del driver.requests
+    del self.driver.requests
     return (tweet_df, int(rate_lim_remaining), int(rate_lim_reset_time))
 
 
-  def scroll_page() -> int:
+  def scroll_page(self) -> int:
     time.sleep(1) # I use a 1s wait for safe measure with my old macbook. 
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-    new_height = driver.execute_script("return document.body.scrollHeight")
+    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+    new_height = self.driver.execute_script("return document.body.scrollHeight")
     return new_height
 
 
 
-  def run_scraper():
-    tweet_df, rate_lim_remaining, rate_lim_reset_time = get_tweets()
-    #TODO: save tweet_df to sql or csv
-    tweet_df.to_csv('test.csv', mode='a', header=False)
+  def run_scraper(self): #TODO: return dataframe with all the data. 
+    #TODO: keep scrolling until new height is the same as current height, i.e. reached the end of the data you require
+    self.driver.get(self.create_twitter_url())
+
+    # Wait for the readyState = complete so page has loaded in. 
+    state = ''
+    while state != 'complete':
+      print('Page loading not complete')
+      time.sleep(1)
+      state = self.driver.execute_script('return document.readyState')
+
+    #TODO: Loop while heights not equal here.
+    tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+    
     print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}')
+
     if rate_lim_remaining <= 2:
       # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
       time_dif = rate_lim_reset_time - time.time()
@@ -128,7 +129,7 @@ class TwitterScraper():
     
 
 
-    page_height = scroll_page()
+    page_height = self.scroll_page()
 
 
 

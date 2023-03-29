@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools >= 67"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "geolocation_twitter_scraper"
-version = "0.0.1"
+version = "0.0.7"
 authors = [
   { name="Christian Harrison" },
 ]
@@ -18,11 +18,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "selenium-wire>=5.1.0",
-    "pandas>=1.5.3",
-    "webdriver-manager>=3.8.5"
+    "selenium-wire >= 5.1.0",
+    "pandas >= 1.5.3",
+    "webdriver-manager >= 3.8.5",
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/christywastaken/geolocation-twitter-scraper"
 "Bug Tracker" = "https://github.com/christywastaken/geolocation-twitter-scraper/issues"
+

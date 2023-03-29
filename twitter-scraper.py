@@ -8,34 +8,69 @@ import json
 from typing import Tuple
 from datetime import datetime, timedelta
 
-class twitter_scraper():
+class TwitterScraper():
 
-  def create_twitter_url(start_date: str = None, end_date: str = None, latitude: float = None, longitude: float = None, radius: float = None, filter_replies: bool = False, filter_links: bool = False) -> str:
+  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = None, longitude: float = None, radius: float = None, filter_replies: bool = False, filter_links: bool = False):
+    """
+    Initialize the TwitterScraper class with optional parameters. The default values are:
+    - start_date: None (today - midnight)
+    - end_date: None (tomorrow - midnight tonight)
+    - latitude: None (default value will be used)
+    - longitude: None (default value will be used)
+    - radius: None (default value will be used)
+    - filter_replies: False
+    - filter_links: False
+
+    You can change these properties when initializing the class or later by assigning new values to the attributes.
+    """
+    self.start_date = start_date
+    self.end_date = end_date
+    self.latitude = latitude
+    self.longitude = longitude
+    self.radius = radius
+    self.filter_replies = filter_replies
+    self.filter_links = filter_links
+
+
+  def create_twitter_url(self) -> str:
     # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
     
     today = datetime.now()
-    if start_date == None:
+    if self.start_date == None:
       #Set the start_date to today
       start_date = today.strftime('%Y-%m-%d')
+    else: start_date = self.start_date
+
     if end_date == None:
       #Set the end_date to tomorrow
       tomorrow = today + timedelta(days=1)
       end_date = tomorrow.strftime('%Y-%m-%d')
+    else:
+      end_date = self.end_date
+  
     if latitude == None:
       latitude = '54.972109'
+    else:
+      latitude = self.latitude
+
     if longitude == None:
       longitude = '-1.611168'
+    else: 
+      longitude = self.longitude
+
     if radius == None:
       radius = 10.0
+    else:
+      radius = self.radius
     
     if filter_replies == False and filter_links == False:
-      return f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}&src=typed_query'   
+      return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}&src=typed_query'   
     if filter_replies == True and filter_links == False:
-      return f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Areplies&src=typed_query'                
+      return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Areplies&src=typed_query'                
     if filter_replies == False and filter_links == True:
-      return f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks&src=typed_query'
+      return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks&src=typed_query'
     if filter_replies == True and filter_links == True:  
-      return f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
+      return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
 
       
   

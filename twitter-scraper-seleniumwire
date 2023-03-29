@@ -17,48 +17,40 @@ longitude = '-1.611168'
 radius = '10.0km'
 #TODO: Add date/time constraints.
 
-#No Filter
+# No Filter
 # twitter_link = f'https://twitter.com/search?q=geocode%3A{latitude}%2C{longitude}%2C{radius}&src=typed_query&f=live'
 
-#Filters links
+# Filters links
 # twitter_link = f'https://twitter.com/search?f=live&q=geocode%3A{latitude}%2C{longitude}%2C{radius}%20-filter%3Alinks&src=typed_query&f=live'
 
-#Filters links and replies
+# Filters links and replies
 twitter_link = f'https://twitter.com/search?q=geocode%3A{latitude}%2C{longitude}%2C{radius}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query&f=live'
 
-#Use ChromeDriverManager().install() to update driver for browser.
+# Use ChromeDriverManager().install() to update driver for browser.
 driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-#Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
+# Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
 driver.scopes= ['.*adaptive.*']
 driver.get(twitter_link)
 
-#Wait for the readyState = complete so page has loaded in. 
+# Wait for the readyState = complete so page has loaded in. 
 state = ''
 while state != 'complete':
   print('Page loading not complete')
   time.sleep(1)
   state = driver.execute_script('return document.readyState')
 
-#Wait 10s for the DOM element containing data-testid="tweet" to be returned. 
-# try:
-#   WebDriverWait(driver, 10).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-testid="tweet"]')))
-#   print('-- tweet DOM returned --')
-# except WebDriverException:
-#   print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
-
 
 def get_tweets():
-  print('-- Getting tweets --')
   tweet_df = pd.DataFrame(columns=['tweet_text', 'datetime'])
   try:
-    #Waits for the response containing 'Adaptive' which contains the tweet data.
+    # Waits for the response containing 'Adaptive' which contains the tweet data.
     request = driver.wait_for_request('adaptive')
-    #Decodes the byte data from the response
+    # Decodes the byte data from the response
     body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')) 
     data = json.loads(body)
     tweets = data['globalObjects']['tweets']
     for tweet_id, tweet_data in tweets.items():
-      #Loops through the tweets and stores the tweet text and datetime to DF.
+      # Loops through the tweets and stores the tweet text and datetime to DF.
       tweet_text = tweet_data['full_text']
       created_at = tweet_data['created_at']
       new_row_df = pd.DataFrame({'tweet_text': [tweet_text], 'datetime': [created_at]})
@@ -68,24 +60,17 @@ def get_tweets():
   tweet_df.sort_values(by='datetime', ascending=False, inplace=True)
   print(len(tweet_df))
   print(tweet_df)
-  #Deletes driver.requests so the app waits for the new request response
+  # Deletes driver.requests so the app waits for the new request response
   del driver.requests
   return tweet_df
 
 
 def scroll_page() -> int:
-  time.sleep(1)
-  print('-- Scrolling page --')
+  time.sleep(1) # I use a 1s wait for safe measure with my old macbook. 
   driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
   new_height = driver.execute_script("return document.body.scrollHeight")
   return new_height
 
-  
-# state = 'y'
-# while state == 'y':
-#   get_tweets()
-#   scroll_page()
-#   state = input('--Continue Y/N?: ')
 
 input('-- Press Enter to run loop 5 times --')
 for i in range(5):

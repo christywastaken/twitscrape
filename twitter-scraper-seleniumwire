@@ -46,61 +46,48 @@ except WebDriverException:
   print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
 
 
-
-
-def get_tweets() -> pd.DataFrame:
+def get_tweets():
   print('-- Getting tweets --')
-  #Wait 10s for the DOM element containing data-testid="tweet" to be returned. 
-  # try:
-  #   WebDriverWait(driver, 10).until(expected_conditions.presence_of_all_elements_located((By.CSS_SELECTOR, '[data-testid="tweet"]')))
-  #   print('-- tweet DOM returned --')
-  # except WebDriverException:
-  #   print('-- Error! No tweets found. Try running as headless=False to diagnose issue. --')
-
+  tweet_df = pd.DataFrame(columns=['tweet_text', 'datetime'])
   try:
+    #Waits for the response containing 'Adaptive' which contains the tweet data.
     request = driver.wait_for_request('adaptive')
-    print(request.response.status_code, request.url)
-    body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity'))
-    
+    #Decodes the byte data from the response
+    body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')) 
     data = json.loads(body)
-
-    with open('json-data.txt', 'w') as f:
-      f.write(str(data))
-  
-    del driver.requests
-  except WebDriverException as err:
-    print(f'-- Error waiting for request. Error {err} --')
-  
-
-  #Get tweets
-  tweets = driver.find_elements(By.CSS_SELECTOR, '[data-testid="tweet"]')
-  tweet_df = pd.DataFrame(columns=['tweetText', 'datetime'])
-  print('Num tweets: ',len(tweets))
-  for tweet in tweets:
-    try:
-      datetime_element = tweet.find_element(By.TAG_NAME, 'time')
-      datetime_value = datetime_element.get_attribute('datetime')
-      text_element = tweet.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
-      text_value = text_element.text
-      new_row_df = pd.DataFrame({'tweetText': text_value, 'datetime': datetime_value}, index=[0])
+    
+    tweets = data['globalObjects']['tweets']
+    for tweet_id, tweet_data in tweets.items():
+      print(tweet_data['full_text'])
+      tweet_text = tweet_data['full_text']
+      created_at = tweet_data['created_at']
+      new_row_df = pd.DataFrame({'tweet_text': tweet_text, 'datetime': created_at})
       tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
-    except Exception as err:
-      print(f'Error: {err}')
-      continue
+  except Exception as err:
+    print(f'-- Error: {err} --')
+  print(len(tweet_df))
   print(tweet_df)
+  #Deletes driver.requests so the app waits for the new request response
+  del driver.requests
   return tweet_df
 
 
-
 def scroll_page() -> int:
+  time.sleep(1)
   print('-- Scrolling page --')
   driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
   new_height = driver.execute_script("return document.body.scrollHeight")
   return new_height
+
   
-state = 'y'
-while state == 'y':
+# state = 'y'
+# while state == 'y':
+#   get_tweets()
+#   scroll_page()
+#   state = input('--Continue Y/N?: ')
+
+print('--Press Enter to run loop 5 times--')
+for i in range(5):
   get_tweets()
   scroll_page()
-  state = input('--Continue Y/N?: ')
-
+  

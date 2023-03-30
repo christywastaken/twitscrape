@@ -42,7 +42,7 @@ class TwitterGeolocationScraper():
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
     self.driver.scopes= ['.*adaptive.*']
     # Tweet_df_model
-    self.tweet_df_model = pd.DataFrame(columns=['tweet_text', 'datetime'])
+    self.tweet_df_model = pd.DataFrame(columns=['datetime', 'tweet_text'])
     print('-- TwitterGeolocationScraper running. This may take a minute to update the webdriver. --')
 
 
@@ -94,9 +94,10 @@ class TwitterGeolocationScraper():
       rate_lim_reset_time = request.response.headers.get('x-rate-limit-reset')
       for tweet_id, tweet_data in tweets.items():
         # Loops through the tweets and stores the tweet text and datetime to DF.
+        #TODO: Store more data and put created at first in df.
         tweet_text = tweet_data['full_text']
         created_at = tweet_data['created_at']
-        new_row_df = pd.DataFrame({'tweet_text': [tweet_text], 'datetime': [created_at]})
+        new_row_df = pd.DataFrame({'datetime': [created_at], 'tweet_text': [tweet_text]})
         tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
     except Exception as err:
       print(f'-- Error: {err} --')
@@ -115,7 +116,7 @@ class TwitterGeolocationScraper():
     state = ''
     while state != 'complete':
       print('Page loading not complete')
-      time.sleep(1)
+      time.sleep(1) 
       state = self.driver.execute_script('return document.readyState')
     all_tweets_df = self.tweet_df_model #TODO: should this append to the a class property, or just return it from the function as I already am? 
     last_height = 0
@@ -124,23 +125,23 @@ class TwitterGeolocationScraper():
       # Destructure output of get_tweets()
       tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
       all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
-      print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}')
+      print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}') #TODO: edit this for better readout.
       if rate_lim_remaining < 3:
         # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
         time_dif = rate_lim_reset_time - time.time()
-        # Add 10s for good measure
-        wait_time = time_dif + 10 
+        # Add 60s for good measure to ensure rate-limit resets.
+        wait_time = time_dif + 60 
         print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
         time.sleep(wait_time)
+      
+      time.sleep(1) #TODO: test if this 1s is needed.
+      self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+      new_height = self.driver.execute_script("return document.body.scrollHeight")
+      if new_height == last_height:
+        print('-- Finished running scraper --')
+        return all_tweets_df
       else:
-        time.sleep(1)
-        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-        new_height = self.driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
-          print('-- Finished running scraper --')
-          return all_tweets_df
-        else:
-          last_height = new_height
+        last_height = new_height
           
 
 

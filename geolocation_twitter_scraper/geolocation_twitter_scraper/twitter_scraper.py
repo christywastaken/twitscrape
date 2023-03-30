@@ -1,6 +1,7 @@
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import time
 import pandas as pd
@@ -8,9 +9,11 @@ import json
 from typing import Tuple
 from datetime import datetime, timedelta
 
-class TwitterScraper():
 
-  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = 54.972109, longitude: float = -1.611168, radius: float = 10.0, filter_replies: bool = False, filter_links: bool = False):
+
+class TwitterGeolocationScraper():
+
+  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = 54.972109, longitude: float = -1.611168, radius: float = 10.0, filter_replies: bool = False, filter_links: bool = False, is_headless=False):
     """
     Initialize the TwitterScraper class with optional parameters. The default values are:
     - start_date: None (default set to today - midnight)
@@ -30,37 +33,40 @@ class TwitterScraper():
     self.radius = radius
     self.filter_replies = filter_replies
     self.filter_links = filter_links
-
+    self.is_headless = is_headless
+    # Set options for browser/driver
+    options = Options()
+    if is_headless:
+      options.add_argument("--headless")
     # Use ChromeDriverManager().install() to update driver for browser.
-    self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
     self.driver.scopes= ['.*adaptive.*']
-
     # Tweet_df_model
     self.tweet_df_model = pd.DataFrame(columns=['tweet_text', 'datetime'])
+    print('-- TwitterGeolocationScraper running. This may take a minute to update the webdriver. --')
+
+
 
   def create_twitter_url(self) -> str:
     # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
-    
     today = datetime.utcnow()
     if self.start_date == None:
       #Set the start_date to today
       start_date = today.strftime('%Y-%m-%d')
-    else: start_date = self.start_date
-
+    else: 
+      start_date = self.start_date
     if self.end_date == None:
       #Set the end_date to tomorrow
       tomorrow = today + timedelta(days=1)
       end_date = tomorrow.strftime('%Y-%m-%d')
     else:
       end_date = self.end_date
-  
     latitude = self.latitude
     longitude = self.longitude
     radius = self.radius
     filter_replies = self.filter_replies
     filter_links = self.filter_links
-    
     if filter_replies == False and filter_links == False:
       return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}&src=typed_query'   
     if filter_replies == True and filter_links == False:
@@ -70,7 +76,7 @@ class TwitterScraper():
     if filter_replies == True and filter_links == True:  
       return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
 
-      
+  
   def get_tweets(self) -> Tuple[pd.DataFrame, int, int]:
     """
     Waits for the request containing the tweet data.
@@ -101,22 +107,18 @@ class TwitterScraper():
     return (tweet_df, int(rate_lim_remaining), int(rate_lim_reset_time))
 
 
-  def run_scraper(self) -> pd.DataFrame:
+  def run(self) -> pd.DataFrame:
     """
     Runs the scraper, returning a dataframe with all of the tweet data.
     """
-    #TODO: return dataframe with all the data. 
-    #TODO: keep scrolling until new height is the same as current height, i.e. reached the end of the data you require
     self.driver.get(self.create_twitter_url())
-
     # Wait for the readyState = complete so page has loaded in. 
     state = ''
     while state != 'complete':
       print('Page loading not complete')
       time.sleep(1)
       state = self.driver.execute_script('return document.readyState')
-
-    all_tweets_df = self.tweet_df_model #TODO: should this append to the a class property, or just return it from the function as I already am. 
+    all_tweets_df = self.tweet_df_model #TODO: should this append to the a class property, or just return it from the function as I already am? 
     last_height = 0
     # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
     while True:
@@ -124,7 +126,6 @@ class TwitterScraper():
       tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
       all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
       print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}')
-
       if rate_lim_remaining < 3:
         # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
         time_dif = rate_lim_reset_time - time.time()

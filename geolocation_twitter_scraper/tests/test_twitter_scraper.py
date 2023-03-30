@@ -1,8 +1,7 @@
-import unittest
-from twitter_scraper import TwitterScraper
+from ...geolocation_twitter_scraper.src.geolocation_twitter_scraper.twitter_scraper import TwitterGeolocationScraper
 
-test_scraper = TwitterScraper(filter_links=True, filter_replies=True)
-tweet_df = test_scraper.run_scraper()
+test_scraper = TwitterGeolocationScraper(filter_replies=True, filter_links=True)
+tweet_df = test_scraper.run()
+
 print(tweet_df)
 
-unittest.main()

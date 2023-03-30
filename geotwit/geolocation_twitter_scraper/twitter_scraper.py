@@ -10,10 +10,9 @@ from typing import Tuple
 from datetime import datetime, timedelta
 
 
-
 class TwitterGeolocationScraper():
 
-  def __init__(self, start_date: str = None, end_date: str = None, latitude: float = 54.972109, longitude: float = -1.611168, radius: float = 10.0, filter_replies: bool = False, filter_links: bool = False, is_headless=False):
+  def __init__(self, start_date:str=None, end_date:str=None, latitude:float=54.972109, longitude:float=-1.611168, radius:float=10.0, filter_replies:bool=False, filter_links:bool=False, is_headless:bool=False):
     """
     Initialize the TwitterScraper class with optional parameters. The default values are:
     - start_date: None (default set to today - midnight)
@@ -37,7 +36,7 @@ class TwitterGeolocationScraper():
     # Set options for browser/driver
     options = Options()
     if is_headless:
-      options.add_argument("--headless")
+      options.add_argument("--headless=new")
     # Use ChromeDriverManager().install() to update driver for browser.
     self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)

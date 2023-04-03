@@ -2,3 +2,6 @@ __pycache__/
 /dist/
 /twitscrape.egg-info/
 /.eggs/
+/.pytest_cache
+/test.csv
+test.csv

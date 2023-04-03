@@ -115,22 +115,18 @@ class TwitterGeolocationScraper():
           tweet_text = None
         try:
           hashtags_entity = tweet_data['entities']['hashtags']
-          hashtags = []
           if not hashtags_entity:
             hashtags = None
           else:
-            for tag in hashtags_entity:
-              hashtags.append(tag['text'])
+            hashtags = '|'.join([x['text'] for x in hashtags_entity])
         except:
           hashtags = None
         try:
           media_entities = tweet_data['extended_entities']['media']
-          media_urls = []
           if not media_entities:
             media_urls = None
           else: 
-            for item in media_entities:
-              media_urls.append(item['media_url'])
+            media_urls = '|'.join([x['media_url'] for x in media_entities])
         except:
           media_urls = None
         try:

@@ -9,6 +9,8 @@ import json
 from typing import Tuple
 from datetime import datetime, timedelta
 
+#TODO: Should the returned dataframe be a class property?
+#TODO: 'filter_links' - does it also filter media? are media classed as links? Find out. Could be misleading. 
 
 class TwitterGeolocationScraper():
 

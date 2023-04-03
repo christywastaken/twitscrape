@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+test/test_twitter_scraper.py
+twitscrape/__init__.py
+twitscrape/test.py
+twitscrape/twitter_scraper.py
+twitscrape.egg-info/PKG-INFO
+twitscrape.egg-info/SOURCES.txt
+twitscrape.egg-info/dependency_links.txt
+twitscrape.egg-info/requires.txt
+twitscrape.egg-info/top_level.txt

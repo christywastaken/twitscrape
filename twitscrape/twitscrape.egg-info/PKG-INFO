@@ -1,0 +1,20 @@
+Metadata-Version: 2.1
+Name: twitscrape
+Version: 0.0.1
+Summary: Simple package using Selenium to scrape tweet data based on geolocation and datetime
+Author-email: Christian Harrison <christywastakenwastaken@gmail.com>
+Project-URL: Homepage, https://github.com/christywastaken/twitscrape
+Project-URL: Bug Tracker, https://github.com/christywastaken/twitscrape/issues
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+This scraper is a side project from a sentiment analysis project I am working on. 
+I decided to package this project as a learning experience since I am new to programming. 
+If you have any comments or recommendations on how I could improve or change this, please feel free to get in touch. 
+If you have stumbled upon this scraper and would like more features, don't hesitate to contact me.
+
+Documentation for use will be available in the near future.

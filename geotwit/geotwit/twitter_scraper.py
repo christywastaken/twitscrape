@@ -35,15 +35,18 @@ class TwitterGeolocationScraper():
     self.is_headless = is_headless
     # Set options for browser/driver
     options = Options()
+    options.add_argument("--window-size=2160,3840")
     if is_headless:
       options.add_argument("--headless=new")
+      
     # Use ChromeDriverManager().install() to update driver for browser.
+    print('-- TwitterGeolocationScraper running. This may take a minute to update the webdriver. --')
     self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
     self.driver.scopes= ['.*adaptive.*']
     # Tweet_df_model
-    self.tweet_df_model = pd.DataFrame(columns=['datetime', 'tweet_text'])
-    print('-- TwitterGeolocationScraper running. This may take a minute to update the webdriver. --')
+    self.tweet_df_model = pd.DataFrame(columns=['datetime', 'tweet_text', ])
+    
 
 
 
@@ -90,13 +93,46 @@ class TwitterGeolocationScraper():
       data = json.loads(body)
       tweets = data['globalObjects']['tweets']
       # Get rate limit info
-      rate_lim_remaining = request.response.headers.get('x-rate-limit-remaining')
-      rate_lim_reset_time = request.response.headers.get('x-rate-limit-reset')
+      try:
+        rate_lim_remaining = int(request.response.headers.get('x-rate-limit-remaining'))
+      except:
+        rate_lim_remaining = None
+      try:
+        rate_lim_reset_time = int(request.response.headers.get('x-rate-limit-reset'))
+      except:
+        rate_lim_reset_time = None
+
       for tweet_id, tweet_data in tweets.items():
-        # Loops through the tweets and stores the tweet text and datetime to DF.
-        #TODO: Store more data and put created at first in df.
-        tweet_text = tweet_data['full_text']
-        created_at = tweet_data['created_at']
+        try:
+          created_at = tweet_data['created_at']
+        except:
+          created_at = None
+        try:
+          tweet_text = tweet_data['full_text']
+        except:
+          tweet_text = None
+        try:
+          hashtags = tweet_data['entities']['hashtags']
+        except:
+          hashtags = None
+        try:
+          media_url = tweet_data['media'][0]['media_url']
+        except:
+          media_url = None
+        try:
+          retweet_count = tweet_data['retweet_count']
+        except:
+          retweet_count = None
+        try:
+          reply_count = tweet_data['reply_count']
+        except:
+          reply_count = None
+        try:
+          favorite_count = tweet_data['favorite_count']
+        except:
+          favorite_count = None
+        
+          
         new_row_df = pd.DataFrame({'datetime': [created_at], 'tweet_text': [tweet_text]})
         tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
     except Exception as err:
@@ -104,7 +140,7 @@ class TwitterGeolocationScraper():
     tweet_df.sort_values(by='datetime', ascending=False, inplace=True)
     # Deletes driver.requests so get_tweets() waits for the new request response 
     del self.driver.requests
-    return (tweet_df, int(rate_lim_remaining), int(rate_lim_reset_time))
+    return (tweet_df, rate_lim_remaining, rate_lim_reset_time)
 
 
   def run(self) -> pd.DataFrame:
@@ -130,11 +166,11 @@ class TwitterGeolocationScraper():
         # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
         time_dif = rate_lim_reset_time - time.time()
         # Add 60s for good measure to ensure rate-limit resets.
-        wait_time = time_dif + 60 
+        wait_time = time_dif + 60 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
         print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
         time.sleep(wait_time)
       
-      time.sleep(1) #TODO: test if this 1s is needed.
+      # time.sleep(1) #TODO: is data lost when this is removed?
       self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
       new_height = self.driver.execute_script("return document.body.scrollHeight")
       if new_height == last_height:

@@ -45,7 +45,7 @@ class TwitterGeolocationScraper():
     # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
     self.driver.scopes= ['.*adaptive.*']
     # Tweet_df_model
-    self.tweet_df_model = pd.DataFrame(columns=['datetime', 'tweet_text', ])
+    self.tweet_df_schema = pd.DataFrame(columns=['tweet_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
     
 
 
@@ -84,7 +84,7 @@ class TwitterGeolocationScraper():
     Waits for the request containing the tweet data.
     Returns a tuple of (tweet dataframe, remaning rate limit, rate limit reset time)
     """
-    tweet_df = self.tweet_df_model
+    tweet_df = self.tweet_df_schema
     try:
       # Waits for the response containing 'Adaptive' which contains the tweet data.
       request = self.driver.wait_for_request('adaptive')
@@ -112,13 +112,25 @@ class TwitterGeolocationScraper():
         except:
           tweet_text = None
         try:
-          hashtags = tweet_data['entities']['hashtags']
+          hashtags_entity = tweet_data['entities']['hashtags']
+          hashtags = []
+          if not hashtags_entity:
+            hashtags = None
+          else:
+            for tag in hashtags_entity:
+              hashtags.append(tag['text'])
         except:
           hashtags = None
         try:
-          media_url = tweet_data['media'][0]['media_url']
+          media_entities = tweet_data['extended_entities']['media']
+          media_urls = []
+          if not media_entities:
+            media_urls = None
+          else: 
+            for item in media_entities:
+              media_urls.append(item['media_url'])
         except:
-          media_url = None
+          media_urls = None
         try:
           retweet_count = tweet_data['retweet_count']
         except:
@@ -131,13 +143,24 @@ class TwitterGeolocationScraper():
           favorite_count = tweet_data['favorite_count']
         except:
           favorite_count = None
-        
+        try:
+          views = tweet_data['ext_views']['count']
+        except:
+          views = None
           
-        new_row_df = pd.DataFrame({'datetime': [created_at], 'tweet_text': [tweet_text]})
+        new_row_df = pd.DataFrame({'tweet_id': [tweet_id], 
+                                   'created_at': [created_at],
+                                   'tweet_text': [tweet_text],
+                                   'hashtags': [hashtags],
+                                   'media_url': [media_urls],
+                                   'retweet_count': [retweet_count],
+                                   'reply_count': [reply_count],
+                                   'favourite_count': [favorite_count],
+                                   'views': [views]})
         tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
     except Exception as err:
       print(f'-- Error: {err} --')
-    tweet_df.sort_values(by='datetime', ascending=False, inplace=True)
+    tweet_df.sort_values(by='created_at', ascending=False, inplace=True)
     # Deletes driver.requests so get_tweets() waits for the new request response 
     del self.driver.requests
     return (tweet_df, rate_lim_remaining, rate_lim_reset_time)
@@ -154,7 +177,7 @@ class TwitterGeolocationScraper():
       print('Page loading not complete')
       time.sleep(1) 
       state = self.driver.execute_script('return document.readyState')
-    all_tweets_df = self.tweet_df_model #TODO: should this append to the a class property, or just return it from the function as I already am? 
+    all_tweets_df = self.tweet_df_schema #TODO: should this append to the a class property, or just return it from the function as I already am? 
     last_height = 0
     # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
     while True:
@@ -170,7 +193,7 @@ class TwitterGeolocationScraper():
         print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
         time.sleep(wait_time)
       
-      # time.sleep(1) #TODO: is data lost when this is removed?
+      time.sleep(1) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
       self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
       new_height = self.driver.execute_script("return document.body.scrollHeight")
       if new_height == last_height:

@@ -3,8 +3,8 @@ requires = ["setuptools >= 67"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "geotwit"
-version = "0.0.2"
+name = "twitscrape
+version = "0.0.1"
 authors = [
   { name="Christian Harrison", email="christywastakenwastaken@gmail.com" },
 ]
@@ -24,6 +24,6 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/christywastaken/geotwit"
-"Bug Tracker" = "https://github.com/christywastaken/geotwit/issues"
+"Homepage" = "https://github.com/christywastaken/twitscrape"
+"Bug Tracker" = "https://github.com/christywastaken/twitscrape/issues"
 

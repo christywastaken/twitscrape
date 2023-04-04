@@ -180,27 +180,31 @@ class TwitterGeolocationScraper():
         last_height = 0
         # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
         while True:
-            # Destructure output of get_tweets()
-            tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
-            all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
-            print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}') #TODO: edit this for better readout. Make activity spinner?
-            if rate_lim_remaining < 3:
-                # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
-                time_dif = rate_lim_reset_time - time.time()
-                # Add 60s for good measure to ensure rate-limit resets.
-                wait_time = time_dif + 60 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
-                print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
-                time.sleep(wait_time)
+            try:
+                # Destructure output of get_tweets()
+                tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+                all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
+                print(f'remaining rate limit: {rate_lim_remaining} | tweet_df length: {len(tweet_df)}') #TODO: edit this for better readout. Make activity spinner?
+                if rate_lim_remaining < 3:
+                    # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
+                    time_dif = rate_lim_reset_time - time.time()
+                    # Add 60s for good measure to ensure rate-limit resets.
+                    wait_time = time_dif + 60 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
+                    print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
+                    time.sleep(wait_time)
+                
+                time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                if new_height == last_height:
+                    print('-- Finished running scraper --')
+                    return all_tweets_df
+                else:
+                    last_height = new_height
+            except Exception as err:
+                print(f'Error: {err}')
+                continue
             
-            time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                print('-- Finished running scraper --')
-                return all_tweets_df
-            else:
-                last_height = new_height
-          
 
 
 

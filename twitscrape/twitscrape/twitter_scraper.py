@@ -97,56 +97,67 @@ class TwitterGeolocationScraper():
             # Get rate limit info
             try:
                 rate_lim_remaining = int(request.response.headers.get('x-rate-limit-remaining'))
-            except:
+            except KeyError as err:
                 rate_lim_remaining = None
+                print(f'Error: {err}')
             try:
                 rate_lim_reset_time = int(request.response.headers.get('x-rate-limit-reset'))
-            except:
+            except KeyError as err:
                 rate_lim_reset_time = None
-
+                print(f'Error: {err}')
             for tweet_id, tweet_data in tweets.items():
-              try:
+                try:
                   created_at = tweet_data['created_at']
-              except:
-                  created_at = None
-              try:
-                  tweet_text = tweet_data['full_text']
-              except:
-                  tweet_text = None
-              try:
-                  hashtags_entity = tweet_data['entities']['hashtags']
-                  if not hashtags_entity:
-                      hashtags = None
-                  else:
-                      hashtags = '|'.join([x['text'] for x in hashtags_entity])
-              except:
-                  hashtags = None
-              try:
-                  media_entities = tweet_data['extended_entities']['media']
-                  if not media_entities:
+                except KeyError as err:
+                    created_at = None
+                    print(f'Error: {err}')
+                try:
+                    tweet_text = tweet_data['full_text']
+                except KeyError as err:
+                    tweet_text = None
+                    print(f'Error: {err}')
+                try:
+                    hashtags_entity = tweet_data['entities']['hashtags']
+                    if not hashtags_entity:
+                        hashtags = None
+                    else:
+                        hashtags = '|'.join([x['text'] for x in hashtags_entity])
+                except KeyError as err:
+                    hashtags = None
+                    print(f'Error: {err}')
+                try:
+                    media_entities = tweet_data['extended_entities']['media']
+                    if not media_entities:
                       media_urls = None
-                  else: 
-                      media_urls = '|'.join([x['media_url'] for x in media_entities])
-              except:
-                  media_urls = None
-              try:
-                  retweet_count = tweet_data['retweet_count']
-              except:
-                  retweet_count = None
-              try:
-                  reply_count = tweet_data['reply_count']
-              except:
-                  reply_count = None
-              try:
-                  favorite_count = tweet_data['favorite_count']
-              except:
-                  favorite_count = None
-              try:
-                  views = tweet_data['ext_views']['count']
-              except:
-                  views = None
+                    else: 
+                        media_urls = '|'.join([x['media_url'] for x in media_entities])
+                except KeyError as err:
+                    media_urls = None
+                    print(f'Error: {err}')
+
+                try:
+                    retweet_count = tweet_data['retweet_count']
+                except KeyError as err:
+                    retweet_count = None
+                    print(f'Error: {err}')
+                try:
+                    reply_count = tweet_data['reply_count']
+                except KeyError as err:
+                    reply_count = None
+                    print(f'Error: {err}')
+
+                try:
+                    favorite_count = tweet_data['favorite_count']
+                except KeyError as err:
+                    favorite_count = None
+                    print(f'Error: {err}')
+                try:
+                    views = tweet_data['ext_views']['count']
+                except KeyError as err:
+                    views = None
+                    print(f'Error: {err}')
                 
-              new_row_df = pd.DataFrame({'tweet_id': [tweet_id], 
+                new_row_df = pd.DataFrame({'tweet_id': [tweet_id], 
                                         'created_at': [created_at],
                                         'tweet_text': [tweet_text],
                                         'hashtags': [hashtags],
@@ -156,7 +167,7 @@ class TwitterGeolocationScraper():
                                         'favourite_count': [favorite_count],
                                         'views': [views]})
               
-              tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
+                tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
         except Exception as err:
             print(f'-- Error: {err} --')
         tweet_df.sort_values(by='created_at', ascending=False, inplace=True)

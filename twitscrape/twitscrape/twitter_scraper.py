@@ -189,7 +189,7 @@ class TwitterGeolocationScraper():
                 # Destructure output of get_tweets()
                 tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
                 all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
-                print(f'remaining rate limit: {rate_lim_remaining} | tweets scraped: {len(tweet_df)}') #TODO: edit this for better readout. Make activity spinner?
+                print(f'remaining rate limit: {rate_lim_remaining} | tweets scraped: {len(all_tweets_df)}') #TODO: edit this for better readout. Make activity spinner?
                 
                 time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
                 self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")

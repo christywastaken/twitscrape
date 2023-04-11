@@ -47,7 +47,7 @@ class TwitterGeolocationScraper():
         # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
         self.driver.scopes= ['.*adaptive.*']
         # Tweet_df_model
-        self.tweet_df_schema = pd.DataFrame(columns=['tweet_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
+        self.tweet_df_schema = pd.DataFrame(columns=['tweet_id', 'user_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
       
 
 
@@ -107,6 +107,11 @@ class TwitterGeolocationScraper():
                 print(f'Error: {err}')
             for tweet_id, tweet_data in tweets.items():
                 try:
+                    user_id = tweet_data['user_id']
+                except KeyError as err:
+                    user_id = None
+                    print(f'Error: {err}')
+                try:
                   created_at = tweet_data['created_at']
                 except KeyError as err:
                     created_at = None
@@ -134,7 +139,6 @@ class TwitterGeolocationScraper():
                 except KeyError as err:
                     media_urls = None
                     print(f'Error: {err}')
-
                 try:
                     retweet_count = tweet_data['retweet_count']
                 except KeyError as err:
@@ -157,7 +161,8 @@ class TwitterGeolocationScraper():
                     views = None
                     print(f'Error: {err}')
                 
-                new_row_df = pd.DataFrame({'tweet_id': [tweet_id], 
+                new_row_df = pd.DataFrame({'tweet_id': [tweet_id],
+                                        'user_id': [user_id],
                                         'created_at': [created_at],
                                         'tweet_text': [tweet_text],
                                         'hashtags': [hashtags],

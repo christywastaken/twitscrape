@@ -37,7 +37,6 @@ class TwitterGeolocationScraper():
         self.is_headless = is_headless
         # Set options for browser/driver
         options = Options()
-        options.add_argument("--window-size=2160,3840")
         if is_headless:
             options.add_argument("--headless=new")
           
@@ -47,7 +46,7 @@ class TwitterGeolocationScraper():
         # Narrows the scope of to requests containing 'adaptive' (the requests containing tweets)
         self.driver.scopes= ['.*adaptive.*']
         # Tweet_df_model
-        self.tweet_df_schema = pd.DataFrame(columns=['tweet_id', 'user_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
+        self.tweet_df = pd.DataFrame(columns=['tweet_id', 'user_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
       
 
 
@@ -81,19 +80,26 @@ class TwitterGeolocationScraper():
             return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
 
     
-    def get_tweets(self) -> Tuple[pd.DataFrame, int, int]:
+    def get_tweets(self) -> Tuple[int, int]:
         """
         Waits for the request containing the tweet data.
         Returns a tuple of (tweet dataframe, remaning rate limit, rate limit reset time)
         """
-        tweet_df = self.tweet_df_schema
+        
         try:
             # Waits for the response containing 'Adaptive' which contains the tweet data.
             request = self.driver.wait_for_request('adaptive')
             # Decodes the byte data from the response
             body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')) 
             data = json.loads(body)
-            tweets = data['globalObjects']['tweets']
+            try:
+                tweets = data['globalObjects']['tweets']
+            except Exception as err:
+                print(f'Error: {err}')
+                with open('error_logging.csv', 'a') as f:
+                    f.write(f'BODY: {data} \n')
+                    f.write(f'HEADERS: {request.response.headers.as_string()} ------------------------------------------ \n')
+                #TODO: logg errors properly. 
             # Get rate limit info
             try:
                 rate_lim_remaining = int(request.response.headers.get('x-rate-limit-remaining'))
@@ -149,7 +155,6 @@ class TwitterGeolocationScraper():
                 except:
                     views = None
 
-                
                 new_row_df = pd.DataFrame({'tweet_id': [tweet_id],
                                         'user_id': [user_id],
                                         'created_at': [created_at],
@@ -160,20 +165,18 @@ class TwitterGeolocationScraper():
                                         'reply_count': [reply_count],
                                         'favourite_count': [favorite_count],
                                         'views': [views]})
-              
-                tweet_df = pd.concat([tweet_df, new_row_df], ignore_index=True)
+                
+                self.tweet_df = pd.concat([self.tweet_df, new_row_df], ignore_index=True)
+                
         except Exception as err:
             print(f'-- Error: {err} --')
-        tweet_df.sort_values(by='created_at', ascending=False, inplace=True)
-        # Deletes driver.requests so get_tweets() waits for the new request response 
-        del self.driver.requests
-        return (tweet_df, rate_lim_remaining, rate_lim_reset_time)
+        print(f'Tweets Scraped: {len(self.tweet_df)}')
+        return (rate_lim_remaining, rate_lim_reset_time)
+
 
 
     def run(self) -> pd.DataFrame:
-        """
-        Runs the scraper, returning a dataframe with all of the tweet data.
-        """
+        """ Runs the scraper, returning a dataframe with all of the tweet data."""
         self.driver.get(self.create_twitter_url())
         # Wait for the readyState = complete so page has loaded in. 
         state = ''
@@ -181,36 +184,44 @@ class TwitterGeolocationScraper():
             print('Page loading not complete')
             time.sleep(1) 
             state = self.driver.execute_script('return document.readyState')
-        all_tweets_df = self.tweet_df_schema #TODO: should this append to the a class property, or just return it from the function as I already am? 
-        last_height = 0
-        # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
-        while True:
-            try:
-                # Destructure output of get_tweets()
-                tweet_df, rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
-                all_tweets_df = pd.concat([all_tweets_df, tweet_df], ignore_index=True)
-                print(f'remaining rate limit: {rate_lim_remaining} | tweets scraped: {len(all_tweets_df)}') #TODO: edit this for better readout. Make activity spinner?
-                
-                time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-                new_height = self.driver.execute_script("return document.body.scrollHeight")
 
-                if rate_lim_remaining < 5:
+        rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+        
+        last_height = 0
+
+        while True:
+            # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
+            try:
+                if rate_lim_remaining < 3:
                     # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
                     time_dif = rate_lim_reset_time - time.time()
-                    # Add 60s for good measure to ensure rate-limit resets.
-                    wait_time = time_dif + 60 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
-                    print(f'-- Waiting {wait_time /60} mins for rate limit to reset --')
-                    time.sleep(wait_time)
+                    wait_time = time_dif + 10 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
+                    print(f'-- Waiting {round(wait_time / 60, 2)} mins for rate limit to reset --')
+                    try:
+                        time.sleep(wait_time)
+                    except Exception as err:
+                        print(f'Error: {err}')
+                        
+                # Deletes driver.requests so get_tweets() waits for the new request response 
+                del self.driver.requests
+                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+                new_height = self.driver.execute_script("return document.body.scrollHeight")
+                time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
+                
+                try:
+                    rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+                except Exception as err:
+                    print(f'Error getting data - get_tweets(). Error: {err}') 
 
                 if new_height == last_height:
-                    print('-- Finished running scraper --')
-                    return all_tweets_df
+                    print('-- Scraper Finished Running. Success. --')
+                    return self.tweet_df
                 else:
                     last_height = new_height
             except Exception as err:
                 print(f'Error: {err}')
-                continue
+                print('-- Scraper Finished Running Prematurely. Incomplete Data Returned (self.tweet_df) --')
+                return self.tweet_df
             
 
 

@@ -97,69 +97,58 @@ class TwitterGeolocationScraper():
             # Get rate limit info
             try:
                 rate_lim_remaining = int(request.response.headers.get('x-rate-limit-remaining'))
-            except KeyError as err:
+            except:
                 rate_lim_remaining = None
-                print(f'Error: {err}')
             try:
                 rate_lim_reset_time = int(request.response.headers.get('x-rate-limit-reset'))
-            except KeyError as err:
+            except:
                 rate_lim_reset_time = None
-                print(f'Error: {err}')
             for tweet_id, tweet_data in tweets.items():
                 try:
                     user_id = tweet_data['user_id']
-                except KeyError as err:
+                except:
                     user_id = None
-                    print(f'Error: {err}')
                 try:
                   created_at = tweet_data['created_at']
-                except KeyError as err:
+                except:
                     created_at = None
-                    print(f'Error: {err}')
                 try:
                     tweet_text = tweet_data['full_text']
-                except KeyError as err:
+                except:
                     tweet_text = None
-                    print(f'Error: {err}')
                 try:
                     hashtags_entity = tweet_data['entities']['hashtags']
                     if not hashtags_entity:
                         hashtags = None
                     else:
                         hashtags = '|'.join([x['text'] for x in hashtags_entity])
-                except KeyError as err:
+                except:
                     hashtags = None
-                    print(f'Error: {err}')
                 try:
                     media_entities = tweet_data['extended_entities']['media']
                     if not media_entities:
                       media_urls = None
                     else: 
                         media_urls = '|'.join([x['media_url'] for x in media_entities])
-                except KeyError as err:
+                except:
                     media_urls = None
-                    print(f'Error: {err}')
                 try:
                     retweet_count = tweet_data['retweet_count']
-                except KeyError as err:
+                except:
                     retweet_count = None
-                    print(f'Error: {err}')
                 try:
                     reply_count = tweet_data['reply_count']
-                except KeyError as err:
+                except:
                     reply_count = None
-                    print(f'Error: {err}')
-
                 try:
                     favorite_count = tweet_data['favorite_count']
-                except KeyError as err:
+                except:
                     favorite_count = None
-                    print(f'Error: {err}')
                 try:
                     views = tweet_data['ext_views']['count']
-                except KeyError as err:
+                except:
                     views = None
-                    print(f'Error: {err}')
+
                 
                 new_row_df = pd.DataFrame({'tweet_id': [tweet_id],
                                         'user_id': [user_id],

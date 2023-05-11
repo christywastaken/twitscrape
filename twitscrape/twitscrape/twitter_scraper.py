@@ -10,7 +10,7 @@ from typing import Tuple
 from datetime import datetime, timedelta
 
 #TODO: Should the returned dataframe be a class property?
-#TODO: 'filter_links' - does it also filter media? are media classed as links? Find out. Could be misleading. 
+
 
 class TwitterGeolocationScraper():
 
@@ -220,7 +220,7 @@ class TwitterGeolocationScraper():
                     last_height = new_height
             except Exception as err:
                 print(f'Error: {err}')
-                print('-- Scraper Finished Running Prematurely. Incomplete Data Returned (self.tweet_df) --')
+                print(f'-- Scraper Finished Running Prematurely. Incomplete Data Returned: self.tweet_df.  --\n-- Continune running the scraper for the remainder of the dates that were not scraped. --')
                 return self.tweet_df
             
 

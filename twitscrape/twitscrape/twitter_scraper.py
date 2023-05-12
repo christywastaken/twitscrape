@@ -36,6 +36,7 @@ class TwitterGeolocationScraper():
         self.filter_links = filter_links
         self.is_headless = is_headless
         self.num_threads = num_threads
+        self.periods: List[Tuple[date, date]]
         # Set options for browser/driver
         options = Options()
         if is_headless:
@@ -48,24 +49,27 @@ class TwitterGeolocationScraper():
         self.driver.scopes= ['.*adaptive.*']
         # Tweet_df_model
         self.tweet_df = pd.DataFrame(columns=['tweet_id', 'user_id', 'created_at', 'tweet_text', 'hashtags', 'media_url', 'retweet_count', 'favourite_count', 'reply_count', 'views'])
-      
+
+        if self.num_threads > 1:
+            self.periods = self.create_date_blocks()
 
 
 
-    def create_twitter_url(self) -> str:
+    def create_twitter_url(self, date_block: Tuple[date, date]) -> str:
         # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
         today = datetime.utcnow()
-        if self.start_date == None:
-            #Set the start_date to today
-            start_date = today.strftime('%Y-%m-%d')
-        else: 
-            start_date = self.start_date
-        if self.end_date == None:
-            #Set the end_date to tomorrow
-            tomorrow = today + timedelta(days=1)
-            end_date = tomorrow.strftime('%Y-%m-%d')
-        else:
-            end_date = self.end_date
+        start_date, end_date = date_block
+        # if self.start_date == None:
+        #     #Set the start_date to today
+        #     start_date = today.strftime('%Y-%m-%d')
+        # else: 
+        #     start_date = self.start_date
+        # if self.end_date == None:
+        #     #Set the end_date to tomorrow
+        #     tomorrow = today + timedelta(days=1)
+        #     end_date = tomorrow.strftime('%Y-%m-%d')
+        # else:
+        #     end_date = self.end_date
         latitude = self.latitude
         longitude = self.longitude
         radius = self.radius
@@ -197,51 +201,53 @@ class TwitterGeolocationScraper():
 
     def run(self) -> pd.DataFrame:
         """ Runs the scraper, returning a dataframe with all of the tweet data."""
-        self.driver.get(self.create_twitter_url())
-        # Wait for the readyState = complete so page has loaded in. 
-        state = ''
-        while state != 'complete':
-            print('Page loading not complete')
-            time.sleep(1) 
-            state = self.driver.execute_script('return document.readyState')
+        for period in self.periods:
+            print(f'Starting new period: {period}')
+            self.driver.get(self.create_twitter_url(period))
+            # Wait for the readyState = complete so page has loaded in. 
+            state = ''
+            while state != 'complete':
+                print('Page loading not complete')
+                time.sleep(1) 
+                state = self.driver.execute_script('return document.readyState')
 
-        rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
-        
-        last_height = 0
+            rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+            
+            last_height = 0
 
-        while True:
-            # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
-            try:
-                if rate_lim_remaining < 3:
-                    # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
-                    time_dif = rate_lim_reset_time - time.time()
-                    wait_time = time_dif + 10 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
-                    print(f'-- Waiting {round(wait_time / 60, 2)} mins for rate limit to reset --')
-                    try:
-                        time.sleep(wait_time)
-                    except Exception as err:
-                        print(f'Error: {err}')
-                        
-                # Deletes driver.requests so get_tweets() waits for the new request response 
-                del self.driver.requests
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-                new_height = self.driver.execute_script("return document.body.scrollHeight")
-                time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
-                
+            while True:
+                # Loop until the document.body.scrollHeight no longer increases - end of page reached. 
                 try:
-                    rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
-                except Exception as err:
-                    print(f'Error getting data - get_tweets(). Error: {err}') 
+                    if rate_lim_remaining < 3:
+                        # If we are getting close to the rate limit, sleep the app until the rate-limit has reset. 
+                        time_dif = rate_lim_reset_time - time.time()
+                        wait_time = time_dif + 10 #TODO: check if this is really requried after new changes made to else statement that stopped driver scrolling
+                        print(f'-- Waiting {round(wait_time / 60, 2)} mins for rate limit to reset --')
+                        try:
+                            time.sleep(wait_time)
+                        except Exception as err:
+                            print(f'Error: {err}')
+                            
+                    # Deletes driver.requests so get_tweets() waits for the new request response 
+                    del self.driver.requests
+                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+                    new_height = self.driver.execute_script("return document.body.scrollHeight")
+                    time.sleep(0.3) #TODO: Work out a better implementation for this timeout. The scrolling should happen when the page is ready, so it doesn't error.
+                    
+                    try:
+                        rate_lim_remaining, rate_lim_reset_time = self.get_tweets()
+                    except Exception as err:
+                        print(f'Error getting data - get_tweets(). Error: {err}') 
 
-                if new_height == last_height:
-                    print('-- Scraper Finished Running. Success. --')
+                    if new_height == last_height:
+                        print('-- Scraper Finished Running. Success. --')
+                        return self.tweet_df
+                    else:
+                        last_height = new_height
+                except Exception as err:
+                    print(f'Error: {err}')
+                    print(f'-- Scraper Finished Running Prematurely. Incomplete Data Returned: self.tweet_df  --\n-- Continune running the scraper for the remainder of the dates that were not scraped, starting with the day before oldest date reached. Once completed, drop duplicate rows. --')
                     return self.tweet_df
-                else:
-                    last_height = new_height
-            except Exception as err:
-                print(f'Error: {err}')
-                print(f'-- Scraper Finished Running Prematurely. Incomplete Data Returned: self.tweet_df  --\n-- Continune running the scraper for the remainder of the dates that were not scraped, starting with the day before oldest date reached. Once completed, drop duplicate rows. --')
-                return self.tweet_df
             
 
 

@@ -6,15 +6,15 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 import pandas as pd
 import json
-from typing import Tuple
-from datetime import datetime, timedelta
+from typing import Tuple, List
+from datetime import datetime, timedelta, date
 
 #TODO: Should the returned dataframe be a class property?
 
 
 class TwitterGeolocationScraper():
 
-    def __init__(self, start_date:str=None, end_date:str=None, latitude:float=54.972109, longitude:float=-1.611168, radius:float=10.0, filter_replies:bool=False, filter_links:bool=False, is_headless:bool=False):
+    def __init__(self, start_date:str=None, end_date:str=None, latitude:float=54.972109, longitude:float=-1.611168, radius:float=10.0, filter_replies:bool=False, filter_links:bool=False, is_headless:bool=False, num_threads:int=1):
         """
         Initialize the TwitterScraper class with optional parameters. The default values are:
         - start_date: None (default set to today - midnight)
@@ -35,6 +35,7 @@ class TwitterGeolocationScraper():
         self.filter_replies = filter_replies
         self.filter_links = filter_links
         self.is_headless = is_headless
+        self.num_threads = num_threads
         # Set options for browser/driver
         options = Options()
         if is_headless:
@@ -79,7 +80,26 @@ class TwitterGeolocationScraper():
         if filter_replies == True and filter_links == True:  
             return f'https://twitter.com/search?f=live&q=geocode%3A{str(latitude)}%2C{str(longitude)}%2C{str(radius)}km%20until%3A{end_date}%20since%3A{start_date}%20-filter%3Alinks%20-filter%3Areplies&src=typed_query'
 
+
+    def create_date_blocks(self) -> List[Tuple[date, date]]:
+        start_date = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end_date = datetime.strptime(self.end_date, "%Y-%m-%d")
+        total_days = (end_date - start_date).days
+        days_per_block = total_days // self.num_threads
+
+        periods = []
+        for i in range(self.num_threads):
+            block_start = start_date + timedelta(days=i * days_per_block)
+            if i == self.num_threads - 1:
+                #Ensure last block ends on end_date
+                block_end = end_date
+            else:
+                block_end = start_date + timedelta(days=((i + 1) * days_per_block) -1)
+            periods.append((block_start, block_end))
+
+        return periods
     
+
     def get_tweets(self) -> Tuple[int, int]:
         """
         Waits for the request containing the tweet data.
@@ -220,7 +240,7 @@ class TwitterGeolocationScraper():
                     last_height = new_height
             except Exception as err:
                 print(f'Error: {err}')
-                print(f'-- Scraper Finished Running Prematurely. Incomplete Data Returned: self.tweet_df.  --\n-- Continune running the scraper for the remainder of the dates that were not scraped. --')
+                print(f'-- Scraper Finished Running Prematurely. Incomplete Data Returned: self.tweet_df  --\n-- Continune running the scraper for the remainder of the dates that were not scraped, starting with the day before oldest date reached. Once completed, drop duplicate rows. --')
                 return self.tweet_df
             
 

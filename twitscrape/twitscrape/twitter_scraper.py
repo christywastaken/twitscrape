@@ -2,7 +2,11 @@ from seleniumwire import webdriver
 from seleniumwire.utils import decode
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from dotenv import load_dotenv
+import os
 import time
 import pandas as pd
 import json
@@ -11,6 +15,7 @@ from datetime import datetime, timedelta, date
 
 #TODO: Should the returned dataframe be a class property?
 
+load_dotenv()
 
 class TwitterGeolocationScraper():
 
@@ -37,6 +42,7 @@ class TwitterGeolocationScraper():
         self.is_headless = is_headless
         self.num_threads = num_threads
         self.periods: List[Tuple[date, date]]
+        self.log_in_url = 'https://twitter.com/i/flow/login'
         # Set options for browser/driver
         options = Options()
         if is_headless:
@@ -53,12 +59,47 @@ class TwitterGeolocationScraper():
         if self.num_threads > 1:
             self.periods = self.create_date_blocks()
 
-
+    def log_in_twitter(self):
+        email = os.environ.get('EMAIL')
+        password = os.environ.get('PASSWORD')
+        username = os.environ.get('USERNAME')
+        self.driver.get(self.log_in_url)
+        time.sleep(10)
+        input_email = self.driver.find_element(By.NAME, 'text')
+        input_email.send_keys(email)
+        time.sleep(1)
+        input_email.send_keys(Keys.ENTER)
+        time.sleep(3)
+        try:
+            time.sleep(3)
+            phone_or_username = self.driver.find_elements(By.XPATH, "//span[contains(text(), 'Phone number or username')]")
+            if len(phone_or_username) > 0:
+                input_username = self.driver.find_element(By.NAME, 'text')
+                input_username.send_keys(username)
+                time.sleep(3)
+                input_username.send_keys(Keys.ENTER)
+                time.sleep(3)
+                input_password = self.driver.find_element(By.NAME, 'password')
+                input_password.send_keys(password)
+                input_password.send_keys(Keys.ENTER)
+            else:
+                time.sleep(3)
+                input_password = self.driver.find_element(By.NAME, 'password')
+                input_password.send_keys(password)
+                input_password.send_keys(Keys.ENTER)
+        except Exception as err:
+            print(f'Error: {err}')
+            
+        
 
     def create_twitter_url(self, date_block: Tuple[date, date]) -> str:
+        self.log_in_twitter()
+        time.sleep(5)
         # As default it uses Central Newcastle-Upon-Tyne with 10km radius, filters links and replies, sorted by latest. Start_date & end_date: current date.
         today = datetime.utcnow()
         start_date, end_date = date_block
+        start_date = start_date.strftime('%Y-%m-%d')
+        end_date = end_date.strftime('%Y-%m-%d')
         # if self.start_date == None:
         #     #Set the start_date to today
         #     start_date = today.strftime('%Y-%m-%d')
@@ -99,6 +140,7 @@ class TwitterGeolocationScraper():
                 block_end = end_date
             else:
                 block_end = start_date + timedelta(days=((i + 1) * days_per_block) -1)
+                #TODO: IF THE NUM_THREADS > THE DAYS TIMEDELTA IT TIES TO SET THE END_BLOCK TO BEFORE THE START_BLOCK
             periods.append((block_start, block_end))
 
         return periods
@@ -205,6 +247,7 @@ class TwitterGeolocationScraper():
             print(f'Starting new period: {period}')
             self.driver.get(self.create_twitter_url(period))
             # Wait for the readyState = complete so page has loaded in. 
+            input('Enter to continue 1')
             state = ''
             while state != 'complete':
                 print('Page loading not complete')

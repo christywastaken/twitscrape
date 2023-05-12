@@ -1,0 +1,4 @@
+https://twitter.com/search?q=newcastle%20until%3A2023-02-04%20since%3A2023-02-03&src=typed_query&f=live
+https://twitter.com/search?q=geocode%3A54.972109%2C-1.611168%2C10.0km%20until%3A2023-02-04%20since%3A2023-02-03&src=typed_query&f=live
+https://twitter.com/search?f=live&q=geocode%3A54.972109%2C-1.611168%2C10.0km%20until%3A2020-03-02%20since%3A2020-02-02%20-filter%3Alinks%20-filter%3Areplies&src=typed_query
+https://twitter.com/search?f=live&q=geocode%3A54.972109%2C-1.611168%2C10.0km%20until%3A2021-12-31%20since%3A2022-01-01%20-filter%3Alinks%20-filter%3Areplies&src=typed_query&f=live
